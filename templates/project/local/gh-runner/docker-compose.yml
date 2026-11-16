@@ -1,0 +1,28 @@
+# One-job GitHub Actions runner on this computer (Dev Crew kit, playbook step 9). Start it with scripts/gh-runner,
+# which fetches the short-lived registration token with the GitHub CLI login. Use only with PRIVATE repositories.
+name: ${PROJECT:?run this through scripts/gh-runner}-gh-runner
+
+services:
+  gh-runner:
+    build: .
+    image: ${PROJECT:?run this through scripts/gh-runner}-gh-runner:local
+    mem_limit: 4g
+    memswap_limit: 4g
+    labels:
+      crew.job: "1"                     # counts against CREW_MAX_JOBS like any other crew Docker job
+      crew.project: ${PROJECT:?run this through scripts/gh-runner}
+      crew.slot: gh-runner
+      crew.agent: github
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:?run this through scripts/gh-runner}
+      RUNNER_REPO: ${RUNNER_REPO:?run this through scripts/gh-runner}
+      RUNNER_NAME: ${RUNNER_NAME:-crew-pc}
+      RUNNER_LABELS: ${RUNNER_LABELS:-crew-pc}
+    volumes:
+      # The only folder a job may write on this computer. Add others only when a job needs them.
+      - ${LOCAL_DIR:?run this through scripts/gh-runner}/runner-out:/runner-out
+    tmpfs:
+      # Memory-only folders: secrets a job writes here (an SSH key, for example) disappear with the container.
+      - /run/crew-secrets:mode=0700,uid=1001,gid=1001
+      # The runner's temp folder, memory only as well; "exec" because jobs run programs from it.
+      - /home/runner/_work/_temp:exec,mode=0700,uid=1001,gid=1001

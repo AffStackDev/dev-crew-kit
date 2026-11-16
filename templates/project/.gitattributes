@@ -1,0 +1,21 @@
+# Dev Crew kit: line endings pinned per file type, so files that run in Linux containers stay LF on Windows and
+# Windows command scripts stay CRLF. Merge with the project's own .gitattributes.
+* text=auto
+*.sh text eol=lf
+*.bash text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.csv text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+# Binary files: never converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary

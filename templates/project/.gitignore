@@ -1,0 +1,18 @@
+# Dev Crew kit: never in Git. Secrets, local settings, data and copies of live systems live outside the repository
+# (in the local-data folder); these lines catch a stray one. Merge with the project's own .gitignore.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.sql
+*.sql.gz
+*.dump
+*.log
+.claude/settings.local.json
+local.properties
+node_modules/

@@ -1,0 +1,38 @@
+name: Checks (manual start)
+# Template from the Dev Crew kit (playbook step 8). The project's checks normally run on the owner's computer
+# (scripts/local check). This workflow is for when the computer is off or the owner is on a phone: it starts only by
+# hand (Actions tab -> Run workflow, or `gh workflow run checks-manual.yml --ref <branch>`), on a GitHub machine (paid
+# minutes), and runs the SAME runner image and scripts/check.sh as the local helper.
+on:
+  workflow_dispatch:
+    inputs:
+      check:
+        description: 'One check name from scripts/check.sh, or "all"'
+        required: false
+        default: 'all'
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Pin to a full commit SHA before first use (gh api repos/actions/checkout/git/ref/tags/<tag>).
+      - uses: actions/checkout@<sha> # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Build the runner image
+        run: docker build -t project-runner:ci local/runner
+      - name: Run the checks on this commit
+        env:
+          CHECK: ${{ inputs.check }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence" && chmod 0777 "$RUNNER_TEMP/evidence"
+          set +e
+          docker run --rm --memory=4g --memory-swap=4g \
+            -e COMMIT="$GITHUB_SHA" -e CHECK="${CHECK:-all}" -e SLOT=ci \
+            -v "$PWD/.git:/repo.git:ro" -v "$RUNNER_TEMP/evidence:/evidence" project-runner:ci
+          rc=$?
+          cat "$RUNNER_TEMP"/evidence/*/summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          exit $rc

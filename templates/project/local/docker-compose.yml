@@ -1,0 +1,47 @@
+# Local test stack for this project (Dev Crew kit, playbook step 7). One stack = one "slot" (SLOT=a, b, c, ...).
+# Start it only through scripts/local.cmd (Windows) or scripts/local.sh (macOS/Linux): they set the variables below,
+# enforce the job limits and pass in the commit to test. The runner tests a clean clone of that commit, made from the
+# repository's Git data (mounted read only), never the files in the project folder.
+# Nothing here talks to live systems. No port is published to the computer.
+name: ${PROJECT:?run this through scripts/local}-${SLOT:-a}
+
+services:
+  runner:
+    build: ./runner
+    image: ${PROJECT:?run this through scripts/local}-runner:local
+    mem_limit: 4g          # hard cap per container; raise only with the owner's OK, never remove
+    memswap_limit: 4g
+    labels:
+      crew.job: "1"        # the helpers count running containers with this label against CREW_MAX_JOBS
+      crew.project: ${PROJECT:?run this through scripts/local}
+      crew.slot: ${SLOT:-a}
+      crew.agent: ${CREW_AGENT:-claude}
+    environment:
+      COMMIT: ${COMMIT:?run this through scripts/local}
+      CHECK: ${CHECK:-all}
+      SLOT: ${SLOT:-a}
+      HOST_DIRTY: ${HOST_DIRTY:-0}
+    volumes:
+      - ${GIT_DIR_HOST:?run this through scripts/local}:/repo.git:ro       # the repository's Git data, read only
+      - work:/work                                                          # this slot's clone and work files
+      - ${LOCAL_DIR:?run this through scripts/local}/evidence:/evidence     # evidence, on the computer's disk
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+
+  # Example service. One per slot (this file is per slot); never share a database between slots: parallel test runs
+  # on one database server can block or corrupt each other. Uncomment and adapt, keep the memory cap.
+  # db:
+  #   image: postgres:16
+  #   mem_limit: 2g
+  #   memswap_limit: 2g
+  #   environment:
+  #     POSTGRES_PASSWORD: test        # throwaway container whose port is not published; not a real credential
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 30
+
+volumes:
+  work:

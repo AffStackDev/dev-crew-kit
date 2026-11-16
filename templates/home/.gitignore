@@ -1,0 +1,9 @@
+# The home base holds notes and rules only. Nothing secret, nothing big, no customer data.
+.env
+.env.*
+*.key
+*.pem
+*.sql
+*.sql.gz
+*.zip
+*.log

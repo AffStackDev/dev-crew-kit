@@ -1,0 +1,68 @@
+name: Release (example)
+# Template from the Dev Crew kit (playbook steps 8 and 9). Copy to .github/workflows/<name>.yml in the project and
+# rename the tags. It runs ONLY when the commit SUBJECT line (first line of the message) carries [release-example-dry]
+# (every gate, no change) or [release-example] (the real release, only with the owner's go). Tags in the commit body
+# don't count: the first step checks the subject again and stops. One release tag per commit.
+#
+# Where it runs: the one-job runner on the owner's computer (label crew-pc, started with scripts/gh-runner) by default;
+# a GitHub machine (paid minutes) when the commit message also carries [hosted]. The job waits until a runner is
+# started. Use self-hosted runners only with PRIVATE repositories.
+on:
+  push:
+    branches: ['work', 'work/**']       # the project's work branch(es); never pull_request (forks must not reach the PC)
+permissions:
+  contents: read
+concurrency:
+  group: release-example               # one group per release workflow; never share a group between three workflows
+  cancel-in-progress: false
+jobs:
+  release:
+    if: contains(github.event.head_commit.message, '[release-example]') || contains(github.event.head_commit.message, '[release-example-dry]')
+    runs-on: ${{ contains(github.event.head_commit.message, '[hosted]') && 'ubuntu-24.04' || fromJSON('["self-hosted","crew-pc"]') }}
+    timeout-minutes: 60
+    steps:
+      - name: Mode (tags count only in the commit subject line; the dry tag wins)
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          subj=$(printf '%s\n' "$MSG" | head -n1)
+          case "$subj" in
+            *'[release-example-dry]'*) echo "DRY=true" >> "$GITHUB_ENV" ;;
+            *'[release-example]'*) echo "DRY=false" >> "$GITHUB_ENV" ;;
+            *) echo "SKIP=1" >> "$GITHUB_ENV"
+               printf '## Not run\n\nThe release tag is only in the commit body, not the subject line, so nothing ran.\n' >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
+
+      # Pin actions to a full commit SHA (look it up: gh api repos/actions/checkout/git/ref/tags/<tag>) so a moved tag
+      # can't change what runs with the project's secrets. Replace <sha> before first use.
+      - uses: actions/checkout@<sha> # v4
+        if: env.SKIP != '1'
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Tools only a GitHub machine needs (the PC runner's image already has them)
+        if: env.SKIP != '1' && runner.environment == 'github-hosted'
+        run: echo "install language runtimes or tools here, pinned to the versions the PC runner image has"
+
+      - name: Release
+        if: env.SKIP != '1'
+        env:
+          # Secrets come from the repository's encrypted secrets, set by the owner (gh secret set NAME). Never echo them.
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          # Write any key only to a memory-only folder (the PC runner mounts /run/crew-secrets as tmpfs).
+          keydir=/run/crew-secrets; [ -d "$keydir" ] || keydir="$RUNNER_TEMP/keys"; mkdir -p "$keydir"
+          # 1. Identity gate: confirm the target is the right one (pinned host key, site address read back).
+          # 2. Preflight: live runs exactly the versions expected; refuse if live changed since the rehearsal.
+          # 3. Backup on the target first.
+          # 4. Change (skipped when DRY=true), one component at a time, with a health check after each.
+          # 5. On any failure: restore from the backup and stop.
+          echo "DRY=$DRY: replace this step with the project's release script (rehearsed on the local copy first)."
+          {
+            echo "## Release ($([ "$DRY" = true ] && echo 'dry run' || echo 'real'))"
+            echo
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Result: replace with the release script's plain summary"
+          } >> "$GITHUB_STEP_SUMMARY"

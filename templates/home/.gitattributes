@@ -1,0 +1,6 @@
+# Line endings, pinned per file type so every agent and tool sees the same bytes.
+*.md text
+*.csv text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
