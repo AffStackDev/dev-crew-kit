@@ -50,6 +50,11 @@ side by side. Every rule in it is there because something went wrong without it.
 
 ## How it fits together
 
+![How the workflow fits together: you, the lead agent, the optional second worker, the exchange file, the project repo and home base, the Docker test stack, local data, GitHub, the PC runner and live](images/dev-crew-workflow.png)
+
+<details>
+<summary>The same diagram as text (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
   you([You]) -- "rules, answers, go/no-go" --> claude[Claude Code<br/>lead + guide]
@@ -66,6 +71,8 @@ flowchart LR
   runner -- "dry run, then go" --> live((Live site / app / store))
   claude --> tools[Your tools<br/>CLI · MCP · API · files · browser]
 ```
+
+</details>
 
 ## Quick start
 
